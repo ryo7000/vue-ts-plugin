@@ -1,6 +1,6 @@
 {
   "name": "ts-vue-plugin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TypeScript Language Service Plugin for Vue",
   "main": "bin/index.js",
   "files": ["bin"],
