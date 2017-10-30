@@ -34,9 +34,8 @@ even support the `template` or `style` tags.
   }
 }
 ```
-You will need "allowSyntheticDefaultImports" so that `import Vue from 'vue'` works.
 
-3. Set your editor to treat `.vue` files as Typescript.
+3. Run the **Select TypeScript version** command in VS Code to use the workspace version of TypeScript. You can find more information about managing typescript versions in the VS Code documentation.
 
 For example, in Emacs, add the line:
 
