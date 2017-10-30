@@ -1,5 +1,5 @@
 {
-  "name": "vue-ts-plugin",
+  "name": "ts-vue-plugin",
   "version": "0.1.0",
   "description": "TypeScript Language Service Plugin for Vue",
   "main": "bin/index.js",
@@ -23,9 +23,9 @@
   "homepage": "https://github.com/sandersn/vue-ts-plugin#readme",
   "devDependencies": {
     "@types/node": "^7.0.5",
-    "typescript": "^2.2.0-dev.20170213"
+    "typescript": "^2.5.0"
   },
-  "dependencies": {
-    "vue-template-compiler": "^2.2.1"
+  "peer-dependencies": {
+    "vue-template-compiler": "*"
   }
 }

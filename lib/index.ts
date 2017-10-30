@@ -1,5 +1,5 @@
-import * as ts_module from "../node_modules/typescript/lib/tsserverlibrary";
-import { parseComponent } from "vue-template-compiler";
+import * as ts_module from 'typescript/lib/tsserverlibrary';
+import { parseComponent } from 'vue-template-compiler';
 import path = require('path');
 
 function init({ typescript: ts } : {typescript: typeof ts_module}) {
@@ -12,7 +12,7 @@ function init({ typescript: ts } : {typescript: typeof ts_module}) {
             return bifilterMap(moduleNames, importInterested,
                                name => ({
                                    resolvedFileName: path.join(path.dirname(containingFile), path.basename(name)),
-                                   extension: ts_module.Extension.Ts
+                                   extension: ts.Extension.Ts
                                }),
                                name => ts.resolveModuleName(name, containingFile, options, ts.sys).resolvedModule);
         };
@@ -96,7 +96,8 @@ function init({ typescript: ts } : {typescript: typeof ts_module}) {
         // 1. add `import Vue from './vue'
         // 2. find the export default and wrap it in `new Vue(...)` if it exists and is an object literal
         //logger.info(sourceFile.getStart() + "-" + sourceFile.getEnd());
-        const exportDefaultObject = find(sourceFile.statements, st => st.kind === ts.SyntaxKind.ExportAssignment &&
+        const statements: ts_module.Statement[] = sourceFile.statements as any;
+        const exportDefaultObject = find(statements, st => st.kind === ts.SyntaxKind.ExportAssignment &&
                                          (st as ts.ExportAssignment).expression.kind === ts.SyntaxKind.ObjectLiteralExpression);
         var b = <T extends ts.Node>(n: T) => ts.setTextRange(n, { pos: 0, end: 0 });
         if (exportDefaultObject) {
@@ -105,7 +106,7 @@ function init({ typescript: ts } : {typescript: typeof ts_module}) {
                                                            undefined,
                                                            b(ts.createImportClause(b(ts.createIdentifier("Vue")), undefined)),
                                                            b(ts.createLiteral("vue"))));
-            sourceFile.statements.unshift(vueImport);
+            statements.unshift(vueImport);
             const obj = (exportDefaultObject as ts.ExportAssignment).expression as ts.ObjectLiteralExpression;
             (exportDefaultObject as ts.ExportAssignment).expression = ts.setTextRange(ts.createNew(ts.setTextRange(ts.createIdentifier("Vue"), { pos: obj.pos, end: obj.pos + 1 }),
                                                                                                    undefined,
