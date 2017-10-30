@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "TypeScript Language Service Plugin for Vue",
   "main": "bin/index.js",
+  "files": ["bin"],
   "scripts": {
     "prepublish": "node node_modules/typescript/lib/tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
