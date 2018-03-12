@@ -24,7 +24,7 @@
   "homepage": "https://github.com/sandersn/vue-ts-plugin#readme",
   "devDependencies": {
     "@types/node": "^7.0.5",
-    "typescript": "^2.5.0"
+    "typescript": "^2.7.0"
   },
   "peer-dependencies": {
     "vue-template-compiler": "*"

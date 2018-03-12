@@ -2,20 +2,65 @@ import * as ts_module from 'typescript/lib/tsserverlibrary';
 import { parseComponent } from 'vue-template-compiler';
 import path = require('path');
 
+function isVue(filename: string): boolean {
+  return path.extname(filename) === '.vue';
+}
+
+function isVueProject(path: string) {
+  return path.endsWith('.vue.ts') && !path.includes('node_modules');
+}
+
+function parse(text: string) {
+  const output = parseComponent(text, { pad: "space" });
+  return output && output.script && output.script.content || 'export default {}';
+}
+
 function init({ typescript: ts } : {typescript: typeof ts_module}) {
   return { create, getExternalFiles };
 
   function create(info: ts.server.PluginCreateInfo) {
     changeSourceFiles(info);
-    info.languageServiceHost.resolveModuleNames = (moduleNames, containingFile) => {
-      const options = info.languageServiceHost.getCompilationSettings();
-      return bifilterMap(moduleNames, importInterested,
-                         name => ({
-                           resolvedFileName: path.join(path.dirname(containingFile), path.basename(name)),
-                           extension: ts.Extension.Ts
-                         }),
-                         name => ts.resolveModuleName(name, containingFile, options, ts.sys).resolvedModule);
+
+    const compilerOptions = info.languageServiceHost.getCompilationSettings();
+    info.languageServiceHost.resolveModuleNames = resolveModuleNames;
+    const vueSys: ts.System = {
+      ...ts.sys,
+      fileExists(path: string) {
+        if (isVueProject(path)) {
+          return ts.sys.fileExists(path.slice(0, -3));
+        }
+        return ts.sys.fileExists(path);
+      },
+      readFile(path, encoding) {
+        if (isVueProject(path)) {
+          const fileText = ts.sys.readFile(path.slice(0, -3), encoding);
+          return fileText ? parse(fileText) : fileText;
+        } else {
+          const fileText = ts.sys.readFile(path, encoding);
+          return fileText;
+        }
+      }
     };
+
+    function resolveModuleNames(moduleNames: string[], containingFile: string): ts.ResolvedModule[] {
+      // in the normal case, delegate to ts.resolveModuleName
+      // in the relative-imported.vue case, manually build a resolved filename
+      return moduleNames.map(name => {
+        if (path.isAbsolute(name) || !isVue(name)) {
+          return ts.resolveModuleName(name, containingFile, compilerOptions, ts.sys).resolvedModule;
+        }
+        const resolved = ts.resolveModuleName(name, containingFile, compilerOptions, vueSys).resolvedModule;
+        if (!resolved) {
+          return undefined as any;
+        }
+        if (!resolved.resolvedFileName.endsWith('.vue.ts')) {
+          return resolved;
+        }
+        const resolvedFileName = resolved.resolvedFileName.slice(0, -3);
+        const extension = ts.Extension.Ts;
+        return { resolvedFileName, extension };
+      });
+    }
 
     return info.languageService;
   }
@@ -29,7 +74,7 @@ function init({ typescript: ts } : {typescript: typeof ts_module}) {
         scriptSnapshot = {
           getChangeRange: old => wrapped.getChangeRange(old),
             getLength: () => wrapped.getLength(),
-            getText: (start, end) => parse(fileName, wrapped.getText(0, wrapped.getLength())).slice(start, end),
+            getText: (start, end) => parse(wrapped.getText(0, wrapped!.getLength())).slice(start, end),
         };
       }
       var sourceFile = clssf(fileName, scriptSnapshot, scriptTarget, version, setNodeParents, scriptKind);
@@ -45,7 +90,7 @@ function init({ typescript: ts } : {typescript: typeof ts_module}) {
         scriptSnapshot = {
           getChangeRange: old => wrapped.getChangeRange(old),
             getLength: () => wrapped.getLength(),
-            getText: (start, end) => parse(sourceFile.fileName, wrapped.getText(0, wrapped.getLength())).slice(start, end),
+            getText: (start, end) => parse(wrapped.getText(0, wrapped.getLength())).slice(start, end),
         };
       }
       var sourceFile = ulssf(sourceFile, scriptSnapshot, version, textChangeRange, aggressiveChecks);
@@ -67,10 +112,6 @@ function init({ typescript: ts } : {typescript: typeof ts_module}) {
     return interested(filename) && filename.slice(0, 2) === "./";
   }
 
-  function parse(fileName: string, text: string) {
-    const output = parseComponent(text, { pad: "space" });
-    return output && output.script && output.script.content;
-  }
 
   /** Works like Array.prototype.find, returning `undefined` if no element satisfying the predicate is found. */
   function find<T>(array: T[], predicate: (element: T, index: number) => boolean): T | undefined {
@@ -81,15 +122,6 @@ function init({ typescript: ts } : {typescript: typeof ts_module}) {
       }
     }
     return undefined;
-  }
-
-  /** Maps elements with one of two functions depending on whether the predicate is true */
-  function bifilterMap<T, U>(l: T[], predicate: (t: T) => boolean, yes: (t: T) => U, no: (t: T) => U): U[] {
-    const result = [];
-    for (const x of l) {
-      result.push(predicate(x) ? yes(x) : no(x));
-    }
-    return result;
   }
 
   function modifyVueSource(sourceFile: ts.SourceFile): void {
@@ -112,7 +144,7 @@ function init({ typescript: ts } : {typescript: typeof ts_module}) {
                                                                                              undefined,
       [obj]),
       obj);
-      ts.setTextRange(((exportDefaultObject as ts.ExportAssignment).expression as ts.NewExpression).arguments, obj);
+      ts.setTextRange(((exportDefaultObject as ts.ExportAssignment).expression as ts.NewExpression).arguments!, obj);
     }
   }
 
